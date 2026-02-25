@@ -1,65 +1,71 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>FlashRead Alpha</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <style>
-    body {
-      margin: 0;
-      background: #0f172a;
-      color: white;
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      text-align: center;
-    }
-    #word {
-      font-size: 42px;
-      font-weight: 500;
-      font-family: monospace;
-    }
-    .focus {
-      color: red;
-    }
-    textarea {
-      width: 90%;
-      height: 100px;
-      margin-top: 20px;
-      background: #1e293b;
-      color: white;
-      border: none;
-      padding: 10px;
-      border-radius: 8px;
-    }
-    input[type=range] {
-      width: 80%;
-      margin-top: 20px;
-    }
-    button {
-      margin-top: 20px;
-      padding: 10px 20px;
-      border-radius: 8px;
-      border: none;
-      background: #2563eb;
-      color: white;
-      font-size: 16px;
-    }
-  </style>
+<meta charset="UTF-8">
+<title>FlashRead Alpha</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body {
+  margin: 0;
+  background: #0f172a;
+  color: white;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+#word {
+  font-size: 42px;
+  font-family: monospace;
+  margin-top: 80px;
+}
+.focus { color: red; }
+textarea, input {
+  width: 90%;
+  margin-top: 15px;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+}
+button {
+  margin-top: 10px;
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  background: #2563eb;
+  color: white;
+}
+#results div {
+  margin-top: 8px;
+  cursor: pointer;
+  padding: 5px;
+  background: #1e293b;
+  border-radius: 6px;
+}
+</style>
 </head>
 <body>
 
-<div id="word">FlashRead</div>
+<h2>FlashRead Alpha</h2>
+
+<div id="word">Ready</div>
 
 <input type="range" min="100" max="1000" step="50" value="300" id="speed">
 <div id="wpm">WPM: 300</div>
 
-<button onclick="toggle()">Start</button>
+<button onclick="toggle()">Start / Pause</button>
 
-<textarea id="textInput" placeholder="Paste text here..."></textarea>
+<hr style="width:90%; margin:30px 0;">
+
+<h3>Search Public Domain Books</h3>
+<input type="text" id="searchInput" placeholder="Search (e.g., Pride and Prejudice)">
+<button onclick="searchBooks()">Search</button>
+<div id="results"></div>
+
+<hr style="width:90%; margin:30px 0;">
+
+<textarea id="textInput" placeholder="Or paste your own text here..."></textarea>
 
 <script>
 let words = [];
@@ -72,6 +78,7 @@ const wordDiv = document.getElementById("word");
 const speedSlider = document.getElementById("speed");
 const wpmDisplay = document.getElementById("wpm");
 const textInput = document.getElementById("textInput");
+const resultsDiv = document.getElementById("results");
 
 speedSlider.addEventListener("input", () => {
   wpm = speedSlider.value;
@@ -88,6 +95,7 @@ function focusIndex(word) {
 
 function formatWord(word) {
   const i = focusIndex(word);
+  if (!word[i]) return word;
   return word.slice(0, i) +
     "<span class='focus'>" + word[i] + "</span>" +
     word.slice(i + 1);
@@ -110,14 +118,50 @@ function nextWord() {
 
 function toggle() {
   if (!playing) {
-    words = textInput.value.split(/\s+/);
-    index = 0;
+    if (words.length === 0) {
+      words = textInput.value.split(/\s+/);
+    }
     playing = true;
     nextWord();
   } else {
     playing = false;
     clearTimeout(timer);
   }
+}
+
+async function searchBooks() {
+  const query = document.getElementById("searchInput").value;
+  resultsDiv.innerHTML = "Searching...";
+  const res = await fetch(`https://gutendex.com/books?search=${query}`);
+  const data = await res.json();
+
+  resultsDiv.innerHTML = "";
+  data.results.slice(0,5).forEach(book => {
+    const textUrl = book.formats["text/plain; charset=utf-8"];
+    if (!textUrl) return;
+
+    const div = document.createElement("div");
+    div.innerText = book.title + " — " + book.authors.map(a=>a.name).join(", ");
+    div.onclick = () => loadBook(textUrl);
+    resultsDiv.appendChild(div);
+  });
+}
+
+async function loadBook(url) {
+  resultsDiv.innerHTML = "Loading book...";
+  const res = await fetch(url);
+  let text = await res.text();
+
+  const start = text.indexOf("*** START OF");
+  const end = text.indexOf("*** END OF");
+  if (start !== -1 && end !== -1) {
+    text = text.substring(start + 15, end);
+  }
+
+  words = text.split(/\s+/);
+  index = 0;
+  playing = false;
+  wordDiv.innerHTML = "Loaded. Press Start.";
 }
 </script>
 
