@@ -17,9 +17,7 @@ body {
   text-align: center;
 }
 
-h1 {
-  margin-top: 40px;
-}
+h1 { margin-top: 40px; }
 
 #word {
   font-size: 42px;
@@ -29,20 +27,6 @@ h1 {
 }
 
 .focus { color: #ef4444; }
-
-input, textarea {
-  width: 90%;
-  padding: 10px;
-  margin-top: 10px;
-  border-radius: 8px;
-  border: none;
-}
-
-textarea {
-  height: 100px;
-  background: #1e293b;
-  color: white;
-}
 
 button {
   margin-top: 10px;
@@ -54,18 +38,9 @@ button {
   font-size: 16px;
 }
 
-#results div {
-  margin-top: 8px;
-  padding: 8px;
+#library button {
   background: #1e293b;
-  border-radius: 6px;
-  cursor: pointer;
-}
-
-hr {
-  width: 90%;
-  margin: 30px 0;
-  opacity: 0.3;
+  margin: 5px;
 }
 </style>
 </head>
@@ -81,16 +56,21 @@ hr {
 
 <button onclick="toggle()">Start / Pause</button>
 
-<hr>
+<hr style="width:90%; margin:30px 0; opacity:.3;">
 
-<h3>Search Public Domain Books</h3>
-<input type="text" id="searchInput" placeholder="Search (e.g., Pride and Prejudice)">
-<button onclick="searchBooks()">Search</button>
-<div id="results"></div>
+<h3>Public Domain Library</h3>
 
-<hr>
-
-<textarea id="textInput" placeholder="Or paste your own text here..."></textarea>
+<div id="library">
+  <button onclick="loadBook('https://www.gutenberg.org/files/1342/1342-0.txt')">
+    Pride and Prejudice
+  </button>
+  <button onclick="loadBook('https://www.gutenberg.org/files/84/84-0.txt')">
+    Frankenstein
+  </button>
+  <button onclick="loadBook('https://www.gutenberg.org/files/1661/1661-0.txt')">
+    Sherlock Holmes
+  </button>
+</div>
 
 <script>
 
@@ -105,8 +85,6 @@ const proxy = "https://api.allorigins.win/raw?url=";
 const wordDiv = document.getElementById("word");
 const speedSlider = document.getElementById("speed");
 const wpmDisplay = document.getElementById("wpm");
-const textInput = document.getElementById("textInput");
-const resultsDiv = document.getElementById("results");
 
 speedSlider.addEventListener("input", () => {
   wpm = Number(speedSlider.value);
@@ -150,10 +128,6 @@ function nextWord() {
 
 function toggle() {
   if (!playing) {
-    if (words.length === 0 && textInput.value.trim() !== "") {
-      words = textInput.value.trim().split(/\s+/);
-      index = 0;
-    }
     playing = true;
     nextWord();
   } else {
@@ -162,44 +136,8 @@ function toggle() {
   }
 }
 
-async function searchBooks() {
-  const query = document.getElementById("searchInput").value.trim();
-  if (!query) return;
-
-  resultsDiv.innerHTML = "Searching...";
-
-  try {
-    const res = await fetch(
-      proxy + encodeURIComponent(`https://gutendex.com/books?search=${query}`)
-    );
-
-    const data = await res.json();
-
-    resultsDiv.innerHTML = "";
-
-    if (!data.results || data.results.length === 0) {
-      resultsDiv.innerHTML = "No results found.";
-      return;
-    }
-
-    data.results.slice(0, 5).forEach(book => {
-      const textUrl = book.formats["text/plain; charset=utf-8"];
-      if (!textUrl) return;
-
-      const div = document.createElement("div");
-      div.innerText =
-        book.title + " — " + book.authors.map(a => a.name).join(", ");
-      div.onclick = () => loadBook(textUrl);
-      resultsDiv.appendChild(div);
-    });
-
-  } catch (error) {
-    resultsDiv.innerHTML = "Search failed. Try again.";
-  }
-}
-
 async function loadBook(url) {
-  resultsDiv.innerHTML = "Loading book...";
+  wordDiv.innerHTML = "Loading book...";
 
   try {
     const res = await fetch(proxy + encodeURIComponent(url));
@@ -217,10 +155,9 @@ async function loadBook(url) {
     playing = false;
 
     wordDiv.innerHTML = "Loaded. Press Start.";
-    resultsDiv.innerHTML = "";
 
   } catch (error) {
-    resultsDiv.innerHTML = "Failed to load book.";
+    wordDiv.innerHTML = "Failed to load book.";
   }
 }
 
